@@ -429,7 +429,7 @@ class DailyHistoryAggregator(object):
                         val = self._minute_reader.get_value(
                             asset, dt, 'close')
                         if pd.isnull(val):
-                            val = _get_filled_close()
+                            val = _get_filled_close(asset)
                         entries[asset] = (dt_value, val)
                         closes.append(val)
                         continue
@@ -437,7 +437,7 @@ class DailyHistoryAggregator(object):
                     val = self._minute_reader.get_value(
                         asset, dt, 'close')
                     if pd.isnull(val):
-                        val = _get_filled_close()
+                        val = _get_filled_close(asset)
                     entries[asset] = (dt_value, val)
                     closes.append(val)
                     continue
