@@ -479,6 +479,118 @@ class MinuteToDailyAggregationTestCase(WithBcolzEquityMinuteBarReader,
                         asset, field, minute))
 
 
+class MinuteToDailyAggregationFuturesTestCase(WithBcolzFutureMinuteBarReader,
+                                              ZiplineTestCase):
+    #    March 2016
+    # Su Mo Tu We Th Fr Sa
+    #        1  2  3  4  5
+    #  6  7  8  9 10 11 12
+    # 13 14 15 16 17 18 19
+    # 20 21 22 23 24 25 26
+    # 27 28 29 30 31
+
+    TRADING_CALENDAR_STRS = ('us_futures',)
+    TRADING_CALENDAR_PRIMARY_CAL = 'us_futures'
+
+    TRADING_ENV_MIN_DATE = START_DATE = pd.Timestamp(
+        '2016-03-01', tz='UTC',
+    )
+    TRADING_ENV_MAX_DATE = END_DATE = pd.Timestamp(
+        '2016-03-31', tz='UTC',
+    )
+
+    ASSET_FINDER_FUTURE_SIDS = 1001, 1002, 1003, 1004
+
+    @classmethod
+    def make_futures_info(cls):
+        future_dict = {}
+
+        for future_sid in cls.ASSET_FINDER_FUTURE_SIDS:
+            future_dict[future_sid] = {
+                'multiplier': 1000,
+                'exchange': 'CME',
+                'root_symbol': "ABC"
+            }
+
+        return pd.DataFrame.from_dict(future_dict, orient='index')
+
+    @classmethod
+    def make_future_minute_bar_data(cls):
+        for sid in cls.ASSET_FINDER_FUTURE_SIDS:
+            frame = FUTURE_CASES[sid]
+            yield sid, frame
+
+    def init_instance_fixtures(self):
+        super(
+            MinuteToDailyAggregationFuturesTestCase,
+            self
+        ).init_instance_fixtures()
+
+        # Set up a fresh data portal for each test, since order of calling
+        # needs to be tested.
+        self.future_daily_aggregator = DailyHistoryAggregator(
+            self.trading_calendar.schedule.market_open,
+            self.bcolz_future_minute_bar_reader,
+            self.trading_calendar
+        )
+
+    @parameterized.expand([
+        ('open_sid_1001', 'open', 1001),
+        ('high_1001', 'high', 1001),
+        ('low_1001', 'low', 1001),
+        ('close_1001', 'close', 1001),
+        ('volume_1001', 'volume', 1001),
+        ('open_1002', 'open', 1002),
+        ('high_1002', 'high', 1002),
+        ('low_1002', 'low', 1002),
+        ('close_1002', 'close', 1002),
+        ('volume_1002', 'volume', 1002),
+        ('open_1003', 'open', 1003),
+        ('high_1003', 'high', 1003),
+        ('low_1003', 'low', 1003),
+        ('close_1003', 'close', 1003),
+        ('volume_1003', 'volume', 1003),
+        ('open_1004', 'open', 1004),
+        ('high_1004', 'high', 1004),
+        ('low_1004', 'low', 1004),
+        ('close_1004', 'close', 1004),
+        ('volume_1004', 'volume', 1004),
+    ])
+    def test_contiguous_minutes_individual(self, name, field, sid):
+        # First test each minute in order.
+        method_name = field + 's'
+        results = []
+        repeat_results = []
+
+        asset = self.asset_finder.retrieve_asset(sid)
+        minutes = FUTURE_CASES[asset].index
+
+        for minute in minutes:
+            value = getattr(self.future_daily_aggregator, method_name)(
+                [asset], minute
+            )[0]
+
+            # Prevent regression on building an array when scalar is intended.
+            self.assertIsInstance(value, Real)
+            results.append(value)
+
+            # Call a second time with the same dt, to prevent regression
+            # against case where crossed start and end dts caused a crash
+            # instead of the last value.
+            value = getattr(self.future_daily_aggregator, method_name)(
+                [asset], minute
+            )[0]
+
+            # Prevent regression on building an array when scalar is intended.
+            self.assertIsInstance(value, Real)
+            repeat_results.append(value)
+
+        assert_almost_equal(results, EXPECTED_AGGREGATION[asset][field],
+                            err_msg='sid={0} field={1}'.format(asset, field))
+        assert_almost_equal(repeat_results, EXPECTED_AGGREGATION[asset][field],
+                            err_msg='sid={0} field={1}'.format(asset, field))
+
+
 class TestMinuteToSession(WithEquityMinuteBarData,
                           ZiplineTestCase):
 
