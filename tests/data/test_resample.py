@@ -30,6 +30,7 @@ from zipline.data.resample import (
     ReindexSessionBarReader,
 )
 
+from zipline.testing import parameter_space
 from zipline.testing.fixtures import (
     WithEquityMinuteBarData,
     WithBcolzEquityMinuteBarReader,
@@ -534,29 +535,12 @@ class MinuteToDailyAggregationFuturesTestCase(WithBcolzFutureMinuteBarReader,
             self.trading_calendar
         )
 
-    @parameterized.expand([
-        ('open_sid_1001', 'open', 1001),
-        ('high_1001', 'high', 1001),
-        ('low_1001', 'low', 1001),
-        ('close_1001', 'close', 1001),
-        ('volume_1001', 'volume', 1001),
-        ('open_1002', 'open', 1002),
-        ('high_1002', 'high', 1002),
-        ('low_1002', 'low', 1002),
-        ('close_1002', 'close', 1002),
-        ('volume_1002', 'volume', 1002),
-        ('open_1003', 'open', 1003),
-        ('high_1003', 'high', 1003),
-        ('low_1003', 'low', 1003),
-        ('close_1003', 'close', 1003),
-        ('volume_1003', 'volume', 1003),
-        ('open_1004', 'open', 1004),
-        ('high_1004', 'high', 1004),
-        ('low_1004', 'low', 1004),
-        ('close_1004', 'close', 1004),
-        ('volume_1004', 'volume', 1004),
-    ])
-    def test_contiguous_minutes_individual(self, name, field, sid):
+    @parameter_space(
+        field=OHLCV,
+        sid=ASSET_FINDER_FUTURE_SIDS,
+        __fail_fast=True,
+    )
+    def test_contiguous_minutes_individual(self, field, sid):
         # First test each minute in order.
         method_name = field + 's'
         results = []
